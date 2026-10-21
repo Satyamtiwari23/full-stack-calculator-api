@@ -239,7 +239,7 @@ This project demonstrates practical understanding of:
 B.Tech in Information Technology | Software Development | Web Development
 
 - **Portfolio:** https://satyamtiwari23.github.io/
-- **GitHub:** [Your GitHub Profile](https://github.com/)
+- **GitHub:** [GitHub](https://github.com/Satyamtiwari23)
 
 ## License
 
