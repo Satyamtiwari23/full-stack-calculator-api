@@ -2,6 +2,8 @@
 
 A full-stack calculator built with **HTML, CSS, JavaScript, Node.js, and Express.js**. The frontend collects mathematical expressions and sends them to a REST API, where the backend evaluates the expression and returns the result as JSON.
 
+> **Note:** This project was created for learning purposes to understand how APIs work and how a frontend communicates with a backend using Node.js, Express.js, HTTP requests, and JSON. It is an educational project, not a production-ready application.
+
 ## Features
 
 - **Interactive Calculator UI** — Enter numbers, decimal values, and arithmetic operators.
@@ -243,4 +245,6 @@ B.Tech in Information Technology | Software Development | Web Development
 
 ## License
 
-This project is available for educational and personal use. Add a `LICENSE` file if you want to publish it under a specific open-source license.
+This project is intended for educational and learning purposes only. It was developed to explore API development and frontend-backend communication.
+
+You are welcome to study the code and use it as a reference for learning.
