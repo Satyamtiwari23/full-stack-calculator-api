@@ -1,202 +1,150 @@
 
-(function () {
-  const displayEl = document.getElementById('display');
-  const historyEl = document.getElementById('history');
-  const keysEl = document.getElementById('keys');
+let expression = [];
+let currentNumber = "";
+let result = "";
 
-  let current = '0';
-  let previous = null;
-  let operator = null;
-  let overwrite = false;
-  let historyText = '';
+function input(value) {
 
-  /* ---------- UI helpers ---------- */
+    // If a new calculation starts after "="
+    if (result !== "" && value !== "C") {
+        if (value >= "0" && value <= "9" || value === ".") {
+            expression = [];
+            currentNumber = "";
+        } else if (value !== "=") {
+            expression = [result];
+            currentNumber = "";
+        }
 
-  function render() {
-    displayEl.textContent = current;
-    historyEl.textContent = historyText;
-  }
-
-  function clearAll() {
-    current = '0';
-    previous = null;
-    operator = null;
-    overwrite = false;
-    historyText = '';
-
-    render();
-  }
-
-  /* ---------- Input handling ---------- */
-
-  function inputDigit(digit) {
-    if (overwrite) {
-      current = digit;
-      overwrite = false;
-    } else {
-      current = current === '0'
-        ? digit
-        : current + digit;
+        result = "";
     }
 
-    render();
-  }
-
-  function inputDecimal() {
-    if (overwrite) {
-      current = '0.';
-      overwrite = false;
-    } else if (!current.includes('.')) {
-      current += '.';
+    // 1. Number input
+    if (value >= "0" && value <= "9") {
+        currentNumber += value;
     }
 
-    render();
-  }
-
-  function chooseOperator(op) {
-    previous = parseFloat(current);
-    operator = op;
-    overwrite = true;
-
-    historyText = `${current} ${op}`;
-
-    render();
-  }
-
-  /* ---------- API call ---------- */
-
-  async function equals() {
-
-    if (previous === null || operator === null) {
-      return;
+    // 2. Decimal input
+    else if (value === ".") {
+        if (!currentNumber.includes(".")) {
+            currentNumber = currentNumber === ""
+                ? "0."
+                : currentNumber + ".";
+        }
     }
 
-    const secondNumber = parseFloat(current);
+    // 3. Operator input
+    else if (["+", "-", "*", "/"].includes(value)) {
 
-    historyText = `${previous} ${operator} ${secondNumber} =`;
-    render();
+        if (currentNumber !== "") {
+            expression.push(Number(currentNumber));
+            currentNumber = "";
+        }
 
+        // Prevent an operator at the beginning
+        if (expression.length === 0) {
+            if (value === "-") {
+                currentNumber = "-";
+            }
+            display();
+            return;
+        }
+
+        // Replace the previous operator if needed
+        if (typeof expression[expression.length - 1] === "string") {
+            expression[expression.length - 1] = value;
+        } else {
+            expression.push(value);
+        }
+    }
+
+    // 4. Equal input
+    else if (value === "=") {
+
+        if (currentNumber !== "") {
+            expression.push(Number(currentNumber));
+            currentNumber = "";
+        }
+
+        // Ignore incomplete expressions
+        if (
+            expression.length === 0 ||
+            typeof expression[expression.length - 1] === "string"
+        ) {
+            display();
+            return;
+        }
+
+        operation();
+    }
+
+    // 5. Clear input
+    else if (value === "C") {
+        expression = [];
+        currentNumber = "";
+        result = "";
+    }
+
+    display();
+}
+
+
+async function operation() {
     try {
+        const response = await fetch("http://localhost:3000/calculate", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                expression: expression
+            })
+        });
 
-      const response = await fetch('http://localhost:3000/api/calculate', {
-        method: 'POST',
+        const data = await response.json();
 
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        if (!response.ok) {
+            throw new Error(data.error || "Calculation failed");
+        }
 
-        body: JSON.stringify({
-          firstNumber: previous,
-          secondNumber: secondNumber,
-          operator: operator
-        })
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        current = 'Error';
-        historyText = data.error || 'Calculation failed';
-        render();
-        return;
-      }
-
-      // Result received from backend
-      current = String(data.result);
-
-      previous = null;
-      operator = null;
-      overwrite = true;
-
-      render();
+        result = data.result;
+        display();
 
     } catch (error) {
+        console.error("Calculator API error:", error);
 
-      console.error('API Error:', error);
+        result = error.message === "Failed to fetch"
+            ? "Server connection error"
+            : error.message;
 
-      current = 'Error';
-      historyText = 'Backend connection failed';
-
-      render();
+        display();
     }
-  }
+}
 
-  /* ---------- Button events ---------- */
 
-  keysEl.addEventListener('click', (e) => {
+function display() {
 
-    const btn = e.target.closest('button');
+    const displayElement = document.getElementById("display");
+    const historyElement = document.getElementById("history");
 
-    if (!btn) return;
-
-    const { digit, op, action } = btn.dataset;
-
-    if (digit !== undefined) {
-      inputDigit(digit);
-    }
-
-    else if (op !== undefined) {
-      chooseOperator(op);
+    if (result !== "") {
+        displayElement.textContent = result;
+    } else {
+        displayElement.textContent =
+            expression.join(" ") +
+            (currentNumber !== ""
+                ? (expression.length > 0 ? " " : "") + currentNumber
+                : "") || "0";
     }
 
-    else if (action === 'decimal') {
-      inputDecimal();
-    }
-
-    else if (action === 'clear') {
-      clearAll();
-    }
-
-    else if (action === 'equals') {
-      equals();
-    }
-  });
+    historyElement.textContent = "";
+}
 
 
-  /* ---------- Keyboard events ---------- */
+// Connect buttons to the input function
+const buttons = document.querySelectorAll("#keys button");
 
-  document.addEventListener('keydown', (e) => {
-
-    const key = e.key;
-
-    if (/^[0-9]$/.test(key)) {
-      inputDigit(key);
-    }
-
-    else if (key === '.') {
-      inputDecimal();
-    }
-
-    else if (key === '+') {
-      chooseOperator('+');
-    }
-
-    else if (key === '-') {
-      chooseOperator('−');
-    }
-
-    else if (key === '*') {
-      chooseOperator('×');
-    }
-
-    else if (key === '/') {
-      e.preventDefault();
-      chooseOperator('÷');
-    }
-
-    else if (key === 'Enter' || key === '=') {
-      e.preventDefault();
-      equals();
-    }
-
-    else if (key === 'Escape') {
-      clearAll();
-    }
-  });
-
-
-  /* ---------- Initial display ---------- */
-
-  render();
-
-})();
+buttons.forEach(function (button) {
+    button.addEventListener("click", function () {
+        input(button.dataset.value);
+    });
+});
